@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { PageContainer } from "@/components/layout/page-container";
 import { ButtonLink } from "@/components/ui/button-link";
-import { APP_NAME, ROUTES } from "@/lib/constants";
+import { APP_NAME, authLoginUrl, ROUTES } from "@/lib/constants";
 
 export default function Home() {
   return (
@@ -20,7 +20,7 @@ export default function Home() {
         </p>
         <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
           <ButtonLink href={ROUTES.dashboard}>Go to dashboard</ButtonLink>
-          <ButtonLink href={ROUTES.login} variant="secondary">
+          <ButtonLink href={authLoginUrl()} variant="secondary">
             Sign in
           </ButtonLink>
         </div>

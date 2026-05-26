@@ -5,3 +5,12 @@ export const ROUTES = {
   dashboard: "/dashboard",
   login: "/login",
 } as const;
+
+export const AUTH_ROUTES = {
+  login: "/auth/login",
+  logout: "/auth/logout",
+} as const;
+
+export function authLoginUrl(returnTo: string = ROUTES.dashboard): string {
+  return `${AUTH_ROUTES.login}?returnTo=${encodeURIComponent(returnTo)}`;
+}
