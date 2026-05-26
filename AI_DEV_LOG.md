@@ -477,3 +477,34 @@ Persistir solo el texto del resumen AI y el rango de fechas seleccionado en SQLi
 
 ---
 
+## [2026-05-26 23:00]
+
+### Prompt
+
+"Implement minimal summary history page: app/dashboard/history/page.tsx, Prisma query newest first, simple list (createdAt, date range, summary preview), empty state, link from dashboard, server-only, no pagination/CRUD/hooks; update AI_DEV_LOG; npm run build."
+
+### Objetivo
+
+Mostrar resúmenes AI guardados en SQLite como historial legible, sin panel de base de datos ni lógica extra.
+
+### Archivos modificados
+
+- `app/dashboard/history/page.tsx` (nuevo)
+- `app/dashboard/page.tsx`
+- `lib/constants.ts`
+- `AI_DEV_LOG.md`
+
+### Cambios realizados
+
+- Página `/dashboard/history`: `findMany` ordenado por `createdAt` desc; tarjetas con fecha/hora, rango de filtro y texto truncado (~240 caracteres).
+- Estado vacío: *No summaries saved yet*; error de carga con alerta suave (sin exponer Prisma/SQLite en UI).
+- Dashboard: enlace *View Summary History* (`ROUTES.summaryHistory`).
+- Server Component únicamente; sin hooks, paginación ni acciones CRUD.
+
+### Notas técnicas
+
+- Protegida por el mismo middleware que `/dashboard`.
+- `truncateSummary` y formateo de fechas inline en la página (sin utilidades nuevas compartidas).
+
+---
+

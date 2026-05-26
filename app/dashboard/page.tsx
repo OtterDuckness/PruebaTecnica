@@ -12,7 +12,7 @@ import { buildGmailDateSearchQuery, fetchRecentEmails } from "@/lib/gmail";
 import { generateEmailSummary } from "@/lib/anthropic";
 import { getGoogleAccessTokenForGmail } from "@/lib/google-access-token";
 import { prisma } from "@/lib/prisma";
-import { AUTH_ROUTES } from "@/lib/constants";
+import { AUTH_ROUTES, ROUTES } from "@/lib/constants";
 import type { GmailFetchResult } from "@/types/gmail";
 
 export const metadata: Metadata = {
@@ -107,9 +107,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             Recent messages from your Gmail inbox.
           </p>
         </div>
-        <ButtonLink href={AUTH_ROUTES.logout} variant="secondary">
-          Log out
-        </ButtonLink>
+        <div className="flex flex-wrap gap-2">
+          <ButtonLink href={ROUTES.summaryHistory} variant="ghost">
+            View Summary History
+          </ButtonLink>
+          <ButtonLink href={AUTH_ROUTES.logout} variant="secondary">
+            Log out
+          </ButtonLink>
+        </div>
       </div>
 
       {user ? (

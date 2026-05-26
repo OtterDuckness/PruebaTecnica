@@ -5,6 +5,7 @@ export const GOOGLE_OAUTH2_PROVIDER = "google-oauth2";
 export const ROUTES = {
   home: "/",
   dashboard: "/dashboard",
+  summaryHistory: "/dashboard/history",
   login: "/login",
 } as const;
 
