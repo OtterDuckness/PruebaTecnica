@@ -11,6 +11,7 @@ import {
 import { buildGmailDateSearchQuery, fetchRecentEmails } from "@/lib/gmail";
 import { generateEmailSummary } from "@/lib/anthropic";
 import { getGoogleAccessTokenForGmail } from "@/lib/google-access-token";
+import { prisma } from "@/lib/prisma";
 import { AUTH_ROUTES } from "@/lib/constants";
 import type { GmailFetchResult } from "@/types/gmail";
 
@@ -77,6 +78,23 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     gmail.ok && gmail.emails.length > 0
       ? await generateEmailSummary(gmail.emails)
       : null;
+
+  if (summary) {
+    try {
+      await prisma.summaryHistory.create({
+        data: {
+          summary,
+          fromDate: from ?? null,
+          toDate: to ?? null,
+        },
+      });
+    } catch (error) {
+      console.error(
+        "[SummaryHistory] save failed:",
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
 
   return (
     <PageContainer>

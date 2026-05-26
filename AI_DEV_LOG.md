@@ -440,3 +440,40 @@ Filtrar correos de Gmail por rango de fechas en el servidor vía query string de
 
 ---
 
+## [2026-05-26 22:00]
+
+### Prompt
+
+"Implement minimal Prisma + SQLite persistence for AI summaries. SummaryHistory model (id, createdAt, fromDate, toDate, summary); lib/prisma.ts singleton; save after successful generation; no emails/tokens/auth; graceful DB failure; update AI_DEV_LOG; prisma migrate dev + build."
+
+### Objetivo
+
+Persistir solo el texto del resumen AI y el rango de fechas seleccionado en SQLite, sin alterar flujos Gmail/Auth0 ni la UI del dashboard.
+
+### Archivos modificados
+
+- `package.json` / `package-lock.json`
+- `prisma/schema.prisma` (nuevo)
+- `prisma/migrations/` (nuevo)
+- `lib/prisma.ts` (nuevo)
+- `app/dashboard/page.tsx`
+- `.env.example`
+- `.gitignore`
+- `AI_DEV_LOG.md`
+
+### Cambios realizados
+
+- Prisma + SQLite con modelo `SummaryHistory` (`fromDate`/`toDate` opcionales, `summary` texto).
+- Cliente singleton en `lib/prisma.ts` (patrón `globalThis` para dev).
+- Dashboard: tras `generateEmailSummary` exitoso, `prisma.summaryHistory.create` en `try/catch`; fallo de DB no afecta render ni resumen.
+- `DATABASE_URL=file:./dev.db` documentado; `prisma/dev.db` en `.gitignore`.
+- Scripts `postinstall` y `build` ejecutan `prisma generate`.
+
+### Notas técnicas
+
+- No se guardan correos, tokens ni datos de usuario.
+- Sin capas repository/service; insert directo desde Server Component.
+- Migración inicial: `init_summary_history`.
+
+---
+
