@@ -1,5 +1,7 @@
 export const APP_NAME = "ImpactIQ";
 
+export const GOOGLE_OAUTH2_PROVIDER = "google-oauth2";
+
 export const ROUTES = {
   home: "/",
   dashboard: "/dashboard",

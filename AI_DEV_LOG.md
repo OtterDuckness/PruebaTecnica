@@ -120,3 +120,211 @@ Refinar la protección middleware de Auth0 para limitar su ejecución únicament
 - Reduce posibles side effects futuros con Gmail API routes.
 - Mantiene rolling sessions funcionando correctamente.
 
+---
+
+## [2026-05-26 15:30]
+
+### Prompt
+
+"Context: Auth0 authentication fully working... Task: Implement minimal Gmail email retrieval using the authenticated Google session. [fetch recent emails server-side, display subject/sender/snippet/date on dashboard, no DB/AI, use fetch() against Gmail API]"
+
+### Objetivo
+
+Mostrar en el dashboard una vista previa de los correos recientes de Gmail usando el access token de Google de la sesión Auth0, con manejo seguro de errores.
+
+### Archivos modificados
+
+- `lib/gmail.ts` (nuevo)
+- `types/gmail.ts` (nuevo)
+- `app/dashboard/page.tsx`
+- `AI_DEV_LOG.md`
+
+### Cambios realizados
+
+- Utilidad `fetchRecentEmails()` en `lib/gmail.ts`: lista mensajes INBOX (máx. 5) y obtiene metadata (Subject, From, Date, snippet) vía `fetch()` a Gmail REST API.
+- Tipos `EmailPreview` y `GmailFetchResult` en `types/gmail.ts`.
+- Dashboard: `auth0.getAccessToken()` server-side → `fetchRecentEmails(token)` → lista de correos o estado de error/ vacío.
+- Eliminados placeholders del dashboard; sección "Recent emails" con UI responsive.
+
+### Notas técnicas
+
+- Token obtenido solo en servidor; sin exposición al cliente.
+- Si falta token o Gmail rechaza (403), mensaje orienta a cerrar sesión y volver a entrar.
+- Limitación: `getAccessToken()` en Server Components puede no persistir refresh de token (documentado en SDK); usuarios con sesión válida y scope concedido funcionan en flujo normal.
+- Próximo paso natural: AI analysis sobre `snippet` sin cambiar la capa Gmail.
+
+---
+
+## [2026-05-26 16:00]
+
+### Prompt
+
+"Debug the existing Gmail token retrieval flow without redesigning architecture. Gmail fetch fails with 'Session expired. Please sign in again.' Add temporary server-side debugging logs for getAccessToken, token existence/scope, Gmail API status/body. Safe debugging only."
+
+### Objetivo
+
+Instrumentar temporalmente el flujo Auth0 → Gmail con logs en terminal para diagnosticar 401/403 o token ausente/inválido, sin exponer tokens al cliente.
+
+### Archivos modificados
+
+- `lib/gmail-debug.ts` (nuevo)
+- `app/dashboard/page.tsx`
+- `lib/gmail.ts`
+- `.env.example`
+- `AI_DEV_LOG.md`
+
+### Cambios realizados
+
+- Módulo `lib/gmail-debug.ts` activado con `GMAIL_DEBUG=true` en `.env.local`.
+- Logs de `getAccessToken`: keys del resultado, `tokenPresent`, `tokenLength`, `scope`, `expiresAt` (nunca el token completo).
+- Logs de Gmail API: `status`, `is401`/`is403`, cuerpo de error sanitizado en `messages.list` y `messages.get`.
+- UI y mensajes de error al usuario sin cambios.
+
+### Notas técnicas
+
+- Eliminar `lib/gmail-debug.ts` y llamadas cuando el problema esté resuelto.
+- El mensaje UI "Session expired" corresponde a Gmail API HTTP 401, no necesariamente a sesión Auth0 caducada.
+
+---
+
+## [2026-05-26 17:00]
+
+### Prompt
+
+"Gmail API returns 401 — auth0.getAccessToken() returns Auth0 token, not Google provider token. Refactor to use Google provider access token from Auth0 session identity (google-oauth2). Safe debug logs for identities/providers. No architecture redesign."
+
+### Objetivo
+
+Usar el access token de Google almacenado en la sesión Auth0 (identidad federada) en lugar del token de API de Auth0 devuelto por `getAccessToken()`.
+
+### Archivos modificados
+
+- `lib/google-access-token.ts` (nuevo)
+- `app/dashboard/page.tsx`
+- `lib/gmail-debug.ts`
+- `AI_DEV_LOG.md`
+
+### Cambios realizados
+
+- `getGoogleAccessTokenFromSession()`: lee token de `session.connectionTokenSets` (`google-oauth2`) o `session.user.identities[].access_token`.
+- Dashboard: pasa `session` de `getSession()` a `loadGmailPreviews()`; ya no llama `auth0.getAccessToken()`.
+- Debug: `debugLogSessionForGmail()` lista providers, presencia de token por identidad/connection, y metadata del `tokenSet` principal (audience/scope) sin valores de token.
+
+### Notas técnicas
+
+- `session.tokenSet.accessToken` es el token de Auth0 (audience Auth0 API) — incorrecto para Gmail.
+- Google token vive en identidad federada o `connectionTokenSets` cuando Auth0 guarda tokens del proveedor.
+- Si ambos están vacíos tras login: habilitar "Store tokens" en conexión Google en Auth0 y volver a autenticar.
+
+---
+
+## [2026-05-26 18:00]
+
+### Prompt
+
+"Gmail fails because provider tokens are not in App Router session (connectionTokenSets and identities null). Implement minimal server-side Google token retrieval via Auth0 Management API using session.sub. Reuse Gmail fetch. Safe debug logs. No DB/token persistence."
+
+### Objetivo
+
+Obtener el access token de Google (`google-oauth2`) desde el perfil de usuario en Auth0 vía Management API cuando la sesión del SDK no expone tokens de proveedor.
+
+### Archivos modificados
+
+- `lib/auth0-management.ts` (nuevo)
+- `lib/google-access-token.ts`
+- `app/dashboard/page.tsx`
+- `lib/gmail-debug.ts`
+- `lib/constants.ts`
+- `.env.example`
+- `AI_DEV_LOG.md`
+
+### Cambios realizados
+
+- Helper Management API: client credentials → `GET /api/v2/users/{sub}` → `identities[].access_token` para `google-oauth2`.
+- `getGoogleAccessTokenForGmail()`: intenta sesión primero; si falla, usa Management API.
+- Variables `AUTH0_MANAGEMENT_CLIENT_ID` / `AUTH0_MANAGEMENT_CLIENT_SECRET` (app M2M con `read:users`, `read:user_idp_tokens`).
+- Logs temporales: éxito Management API, conteo de identidades, providers, presencia de token Google (sin valores completos).
+
+### Notas técnicas
+
+- La sesión Next.js solo incluye claims del ID token y `tokenSet` de Auth0; no serializa tokens de IdP en cookies por seguridad/tamaño.
+- `connectionTokenSets` se rellena con `getAccessTokenForConnection`, no automáticamente en login en RSC.
+- Management API lee el perfil canónico del usuario donde Auth0 guarda tokens de Google si "Store tokens" está activo en la conexión social.
+
+---
+
+## 2026-05-26 — Added temporary Gmail/Auth0 debug instrumentation
+
+### Purpose
+
+Investigate why Gmail API requests returned 401 Unauthorized despite successful Auth0 + Google authentication.
+
+### Changes
+
+- Added temporary server-side debug logging for:
+
+  - Auth0 session structure
+
+  - tokenSet presence
+
+  - connectionTokenSets
+
+  - Google identity/provider token availability
+
+  - Gmail API response status/errors
+
+  - Auth0 Management API responses
+
+- Added optional `GMAIL_DEBUG` environment flag in `.env.local`
+
+- Ensured no sensitive token values were logged
+
+### Findings
+
+- `auth0.getAccessToken()` returned Auth0 session/API tokens, not Google provider tokens
+
+- App Router session did not expose Google federated tokens directly
+
+- Provider token retrieval required Auth0 Management API + `read:user_idp_tokens`
+
+### Outcome
+
+Successfully identified and fixed Gmail provider token retrieval flow.
+
+## 2026-05-26 — Added temporary Gmail/Auth0 debug instrumentation
+
+### Purpose
+
+Investigate why Gmail API requests returned 401 Unauthorized despite successful Auth0 + Google authentication.
+
+### Changes
+
+- Added temporary server-side debug logging for:
+
+  - Auth0 session structure
+
+  - tokenSet presence
+
+  - connectionTokenSets
+
+  - Google identity/provider token availability
+
+  - Gmail API response status/errors
+
+  - Auth0 Management API responses
+
+- Added optional `GMAIL_DEBUG` environment flag in `.env.local`
+
+- Ensured no sensitive token values were logged
+
+### Findings
+
+- `auth0.getAccessToken()` returned Auth0 session/API tokens, not Google provider tokens
+
+- App Router session did not expose Google federated tokens directly
+
+- Provider token retrieval required Auth0 Management API + `read:user_idp_tokens`
+
+### Outcome
+
+Successfully identified and fixed Gmail provider token retrieval flow.

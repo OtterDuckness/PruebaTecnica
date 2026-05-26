@@ -2,22 +2,59 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { PageContainer } from "@/components/layout/page-container";
 import { ButtonLink } from "@/components/ui/button-link";
+import type { SessionData } from "@auth0/nextjs-auth0/types";
 import { auth0 } from "@/lib/auth0";
+import {
+  debugLogSessionForGmail,
+  isGmailDebugEnabled,
+} from "@/lib/gmail-debug";
+import { fetchRecentEmails } from "@/lib/gmail";
+import { getGoogleAccessTokenForGmail } from "@/lib/google-access-token";
 import { AUTH_ROUTES } from "@/lib/constants";
+import type { GmailFetchResult } from "@/types/gmail";
 
 export const metadata: Metadata = {
   title: "Dashboard",
 };
 
-const placeholders = [
-  { title: "Overview", description: "Summary metrics will appear here." },
-  { title: "Activity", description: "Recent events and updates." },
-  { title: "Settings", description: "Account preferences (future)." },
-];
+async function loadGmailPreviews(
+  session: SessionData | null,
+): Promise<GmailFetchResult> {
+  if (isGmailDebugEnabled()) {
+    console.log("[GmailDebug] loadGmailPreviews: starting (dashboard server)");
+  }
+
+  if (!session) {
+    return {
+      ok: false,
+      error: "No active session. Please sign in again.",
+    };
+  }
+
+  debugLogSessionForGmail(session);
+
+  const tokenResult = await getGoogleAccessTokenForGmail(session);
+
+  if (isGmailDebugEnabled()) {
+    console.log("[GmailDebug] Google provider token resolution", {
+      ok: tokenResult.ok,
+      source: tokenResult.ok ? tokenResult.source : "none",
+      tokenPresent: tokenResult.ok ? tokenResult.token.length > 0 : false,
+      tokenLength: tokenResult.ok ? tokenResult.token.length : 0,
+    });
+  }
+
+  if (!tokenResult.ok) {
+    return { ok: false, error: tokenResult.error };
+  }
+
+  return fetchRecentEmails(tokenResult.token);
+}
 
 export default async function DashboardPage() {
   const session = await auth0.getSession();
   const user = session?.user;
+  const gmail = await loadGmailPreviews(session);
 
   return (
     <PageContainer>
@@ -27,7 +64,7 @@ export default async function DashboardPage() {
             Dashboard
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            You are signed in. Gmail integration will be added in a later step.
+            Recent messages from your Gmail inbox.
           </p>
         </div>
         <ButtonLink href={AUTH_ROUTES.logout} variant="secondary">
@@ -64,31 +101,55 @@ export default async function DashboardPage() {
                   {user.email}
                 </p>
               ) : null}
-              {user.sub ? (
-                <p className="mt-1 truncate font-mono text-xs text-zinc-500">
-                  {user.sub}
-                </p>
-              ) : null}
             </div>
           </div>
         </section>
       ) : null}
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {placeholders.map((card) => (
-          <article
-            key={card.title}
-            className="rounded-xl border border-dashed border-zinc-300 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900"
+      <section className="mt-8">
+        <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+          Recent emails
+        </h2>
+
+        {!gmail.ok ? (
+          <div
+            role="alert"
+            className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200"
           >
-            <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-              {card.title}
-            </h2>
-            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-              {card.description}
-            </p>
-          </article>
-        ))}
-      </div>
+            <p className="font-medium">Unable to load Gmail messages</p>
+            <p className="mt-1 text-amber-800 dark:text-amber-300">{gmail.error}</p>
+          </div>
+        ) : gmail.emails.length === 0 ? (
+          <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
+            No messages found in your inbox.
+          </p>
+        ) : (
+          <ul className="mt-4 divide-y divide-zinc-200 rounded-xl border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
+            {gmail.emails.map((email) => (
+              <li key={email.id} className="p-4 sm:p-5">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                  <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                    {email.subject}
+                  </p>
+                  {email.date ? (
+                    <time className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">
+                      {email.date}
+                    </time>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                  {email.sender}
+                </p>
+                {email.snippet ? (
+                  <p className="mt-2 line-clamp-2 text-sm text-zinc-500 dark:text-zinc-500">
+                    {email.snippet}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </PageContainer>
   );
 }
