@@ -508,3 +508,34 @@ Mostrar resúmenes AI guardados en SQLite como historial legible, sin panel de b
 
 ---
 
+## [2026-05-26 23:30]
+
+### Prompt
+
+"Enhance AI summary flow with lightweight action item extraction: plain-text Summary + Action items sections from Anthropic, dashboard renders both, preserve fallback/history/DB flow; no JSON/schemas/frameworks; update AI_DEV_LOG; build."
+
+### Objetivo
+
+Extraer ítems de acción junto al resumen sin parsing estructurado ni cambios de arquitectura.
+
+### Archivos modificados
+
+- `lib/anthropic.ts`
+- `app/dashboard/page.tsx`
+- `AI_DEV_LOG.md`
+
+### Cambios realizados
+
+- Prompt pide dos secciones en texto plano: `Summary:` y `Action items:` (bullets o `None`).
+- `parseEmailSummaryResponse`: split simple por cabecera; retorna `EmailSummaryResult | null`.
+- `formatEmailSummaryForStorage`: concatena resumen + acciones para persistencia en `SummaryHistory`.
+- Dashboard: sección **Action items** bajo el resumen si hay contenido; fallback sin cambios.
+- `max_tokens` subido a 400 para caber ambas secciones.
+
+### Notas técnicas
+
+- Historial sigue mostrando el texto guardado (incluye acciones si existían).
+- Sin JSON, schemas ni capas nuevas; parsing mínimo por delimitador de sección.
+
+---
+

@@ -9,7 +9,10 @@ import {
   isGmailDebugEnabled,
 } from "@/lib/gmail-debug";
 import { buildGmailDateSearchQuery, fetchRecentEmails } from "@/lib/gmail";
-import { generateEmailSummary } from "@/lib/anthropic";
+import {
+  formatEmailSummaryForStorage,
+  generateEmailSummary,
+} from "@/lib/anthropic";
 import { getGoogleAccessTokenForGmail } from "@/lib/google-access-token";
 import { prisma } from "@/lib/prisma";
 import { AUTH_ROUTES, ROUTES } from "@/lib/constants";
@@ -74,16 +77,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const session = await auth0.getSession();
   const user = session?.user;
   const gmail = await loadGmailPreviews(session, from, to);
-  const summary =
+  const emailSummary =
     gmail.ok && gmail.emails.length > 0
       ? await generateEmailSummary(gmail.emails)
       : null;
 
-  if (summary) {
+  if (emailSummary) {
     try {
       await prisma.summaryHistory.create({
         data: {
-          summary,
+          summary: formatEmailSummaryForStorage(emailSummary),
           fromDate: from ?? null,
           toDate: to ?? null,
         },
@@ -204,10 +207,22 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <h3 className="text-sm font-medium text-indigo-900 dark:text-indigo-200">
                 AI summary
               </h3>
-              {summary ? (
-                <p className="mt-2 text-sm leading-relaxed text-indigo-950 dark:text-indigo-100">
-                  {summary}
-                </p>
+              {emailSummary ? (
+                <>
+                  <p className="mt-2 text-sm leading-relaxed text-indigo-950 dark:text-indigo-100">
+                    {emailSummary.summary}
+                  </p>
+                  {emailSummary.actionItems ? (
+                    <div className="mt-4 border-t border-indigo-200/80 pt-4 dark:border-indigo-800/50">
+                      <h4 className="text-sm font-medium text-indigo-900 dark:text-indigo-200">
+                        Action items
+                      </h4>
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-indigo-950 dark:text-indigo-100">
+                        {emailSummary.actionItems}
+                      </p>
+                    </div>
+                  ) : null}
+                </>
               ) : (
                 <p className="mt-2 text-sm text-indigo-800/70 dark:text-indigo-300/70">
                   AI summary is temporarily unavailable.
