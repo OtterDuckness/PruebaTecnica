@@ -262,69 +262,150 @@ Investigate why Gmail API requests returned 401 Unauthorized despite successful 
 ### Changes
 
 - Added temporary server-side debug logging for:
-
   - Auth0 session structure
-
   - tokenSet presence
-
   - connectionTokenSets
-
   - Google identity/provider token availability
-
   - Gmail API response status/errors
-
   - Auth0 Management API responses
-
 - Added optional `GMAIL_DEBUG` environment flag in `.env.local`
-
 - Ensured no sensitive token values were logged
 
 ### Findings
 
 - `auth0.getAccessToken()` returned Auth0 session/API tokens, not Google provider tokens
-
 - App Router session did not expose Google federated tokens directly
-
 - Provider token retrieval required Auth0 Management API + `read:user_idp_tokens`
 
 ### Outcome
 
 Successfully identified and fixed Gmail provider token retrieval flow.
 
-## 2026-05-26 — Added temporary Gmail/Auth0 debug instrumentation
+---
 
-### Purpose
+## [2026-05-26 19:00]
 
-Investigate why Gmail API requests returned 401 Unauthorized despite successful Auth0 + Google authentication.
+### Prompt
 
-### Changes
+"Implement minimal Anthropic email summarization for the existing Gmail dashboard. Server-side only, claude-3-haiku, reuse Gmail previews, lib/anthropic.ts, no new routes/DB/streaming, ANTHROPIC_API_KEY."
 
-- Added temporary server-side debug logging for:
+### Objetivo
 
-  - Auth0 session structure
+Generar un resumen conciso de los últimos correos con Anthropic y mostrarlo sobre la lista en el dashboard.
 
-  - tokenSet presence
+### Archivos modificados
 
-  - connectionTokenSets
+- `lib/anthropic.ts` (nuevo)
+- `app/dashboard/page.tsx`
+- `package.json` / `package-lock.json`
+- `.env.example`
+- `AI_DEV_LOG.md`
 
-  - Google identity/provider token availability
+### Cambios realizados
 
-  - Gmail API response status/errors
+- Instalado `@anthropic-ai/sdk`.
+- `generateEmailSummary(emails)`: prompt compacto (máx. 5 emails: sender, subject, date, snippet) → `claude-3-haiku-20240307`, retorna string o `null`.
+- Dashboard: tras fetch Gmail exitoso, llama al helper y muestra sección "AI summary" sobre la lista; fallback si API falla o falta key.
 
-  - Auth0 Management API responses
+### Notas técnicas
 
-- Added optional `GMAIL_DEBUG` environment flag in `.env.local`
+- Sin rutas API nuevas; todo en Server Component.
+- Errores de Anthropic no rompen el dashboard; solo oculta/muestra mensaje de summary unavailable.
 
-- Ensured no sensitive token values were logged
+---
 
-### Findings
+## [2026-05-26 19:30]
 
-- `auth0.getAccessToken()` returned Auth0 session/API tokens, not Google provider tokens
+### Prompt
 
-- App Router session did not expose Google federated tokens directly
+"Continue/finish Anthropic summarization integration from partial state. Refine prompt, temperature 0.3, dashboard summary above email list, subtle null fallback, no architecture drift."
 
-- Provider token retrieval required Auth0 Management API + `read:user_idp_tokens`
+### Objetivo
 
-### Outcome
+Completar integración server-side de resumen Anthropic sin cambiar auth/Gmail.
 
-Successfully identified and fixed Gmail provider token retrieval flow.
+### Archivos modificados
+
+- `lib/anthropic.ts`
+- `app/dashboard/page.tsx`
+- `AI_DEV_LOG.md`
+
+### Cambios realizados
+
+- Prompt refinado: updates, requests, meetings, deadlines, action items.
+- `temperature: 0.3` en llamada a `claude-3-haiku-20240307`.
+- Dashboard: `generateEmailSummary(gmail.emails)` tras fetch exitoso; UI "AI summary" sobre lista; fallback sutil si `null`.
+- Sin logs de API key ni respuestas crudas de Anthropic.
+
+### Notas técnicas
+
+- `ANTHROPIC_API_KEY` leída solo en servidor vía `process.env`.
+- Flujo secuencial: Gmail → summary → render (sin paralelización innecesaria).
+
+---
+
+## [2026-05-26 20:00]
+
+### Prompt
+
+"Implement and complete minimal Anthropic email summarization for the Gmail dashboard: server-side only, official `@anthropic-ai/sdk`, `claude-3-haiku-20240307`, reuse existing `EmailPreview` data (max 5 emails), `ANTHROPIC_API_KEY` from `.env.local`, summary UI above email list, graceful null fallback, no new API routes/client components/hooks/DB. Refine prompt and `temperature: 0.3`. Temporary `console.error` in Anthropic catch block to diagnose null summary (no API keys or full prompts logged)."
+
+### Objetivo
+
+Añadir resumen AI conciso de los correos recientes en el dashboard, ejecutado íntegramente en el servidor, sin alterar los flujos Auth0/Gmail existentes.
+
+### Archivos modificados
+
+- `lib/anthropic.ts` (nuevo)
+- `app/dashboard/page.tsx`
+- `package.json` / `package-lock.json`
+- `.env.example`
+- `AI_DEV_LOG.md`
+
+### Cambios realizados
+
+- Integración del SDK oficial `@anthropic-ai/sdk` con `generateEmailSummary(emails)` en `lib/anthropic.ts`.
+- Modelo `claude-3-haiku-20240307`, `max_tokens: 300`, `temperature: 0.3`.
+- Prompt: resumen en 2–4 frases centrado en actualizaciones, solicitudes, reuniones, plazos y acciones; entrada construida con sender, subject, date y snippet.
+- Límite de 5 correos (`MAX_EMAILS`) alineado con el fetch Gmail existente.
+- Dashboard (`app/dashboard/page.tsx`): tras Gmail exitoso, `await generateEmailSummary(gmail.emails)`; sección **AI summary** encima de la lista de correos.
+- Fallback graceful: si el resumen es `null` (API key ausente, error SDK o lista vacía), el dashboard sigue mostrando correos y un mensaje sutil (*AI summary is temporarily unavailable*).
+- Sin rutas API nuevas, sin `"use client"`, sin hooks/providers/contexts, streaming, retry ni persistencia.
+- Variable `ANTHROPIC_API_KEY` documentada en `.env.example`.
+- Depuración temporal pendiente/en curso: un único `console.error("[Anthropic] generateEmailSummary failed:", message)` en el `catch` de `lib/anthropic.ts` para ver el error real en terminal (sin registrar keys ni prompts completos).
+
+### Notas técnicas
+
+- **Riesgo:** `ANTHROPIC_API_KEY` inválida o ausente → `null` y fallback UI; no afecta Gmail ni auth.
+- **Riesgo:** modelo o cuenta sin acceso a Haiku → error capturado; revisar mensaje en terminal con el log temporal.
+- **Riesgo:** el log `console.error` es temporal; eliminarlo cuando el fallo esté identificado.
+- La clave y las respuestas crudas de Anthropic no se exponen al cliente ni se registran en logs de depuración planificados.
+- Orden de ejecución: sesión → token Google (Management API si aplica) → Gmail → Anthropic → render.
+
+---
+
+## [2026-05-26 20:15]
+
+### Prompt
+
+"Fix Anthropic model not found error by updating to an available Haiku model."
+
+### Objetivo
+
+Corregir error 404 de modelo Anthropic no disponible.
+
+### Archivos modificados
+
+- `lib/anthropic.ts`
+- `AI_DEV_LOG.md`
+
+### Cambios realizados
+
+- Modelo actualizado a claude-sonnet-4-0.
+
+### Notas técnicas
+
+- Cambio mínimo sin alterar arquitectura existente.
+
+---
+

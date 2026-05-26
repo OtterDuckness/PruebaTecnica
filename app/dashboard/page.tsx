@@ -9,6 +9,7 @@ import {
   isGmailDebugEnabled,
 } from "@/lib/gmail-debug";
 import { fetchRecentEmails } from "@/lib/gmail";
+import { generateEmailSummary } from "@/lib/anthropic";
 import { getGoogleAccessTokenForGmail } from "@/lib/google-access-token";
 import { AUTH_ROUTES } from "@/lib/constants";
 import type { GmailFetchResult } from "@/types/gmail";
@@ -55,6 +56,10 @@ export default async function DashboardPage() {
   const session = await auth0.getSession();
   const user = session?.user;
   const gmail = await loadGmailPreviews(session);
+  const summary =
+    gmail.ok && gmail.emails.length > 0
+      ? await generateEmailSummary(gmail.emails)
+      : null;
 
   return (
     <PageContainer>
@@ -124,30 +129,47 @@ export default async function DashboardPage() {
             No messages found in your inbox.
           </p>
         ) : (
-          <ul className="mt-4 divide-y divide-zinc-200 rounded-xl border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
-            {gmail.emails.map((email) => (
-              <li key={email.id} className="p-4 sm:p-5">
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                  <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                    {email.subject}
-                  </p>
-                  {email.date ? (
-                    <time className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">
-                      {email.date}
-                    </time>
-                  ) : null}
-                </div>
-                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                  {email.sender}
+          <>
+            <section className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/80 p-4 dark:border-indigo-900/50 dark:bg-indigo-950/30 sm:p-5">
+              <h3 className="text-sm font-medium text-indigo-900 dark:text-indigo-200">
+                AI summary
+              </h3>
+              {summary ? (
+                <p className="mt-2 text-sm leading-relaxed text-indigo-950 dark:text-indigo-100">
+                  {summary}
                 </p>
-                {email.snippet ? (
-                  <p className="mt-2 line-clamp-2 text-sm text-zinc-500 dark:text-zinc-500">
-                    {email.snippet}
+              ) : (
+                <p className="mt-2 text-sm text-indigo-800/70 dark:text-indigo-300/70">
+                  AI summary is temporarily unavailable.
+                </p>
+              )}
+            </section>
+
+            <ul className="mt-4 divide-y divide-zinc-200 rounded-xl border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
+              {gmail.emails.map((email) => (
+                <li key={email.id} className="p-4 sm:p-5">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                    <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                      {email.subject}
+                    </p>
+                    {email.date ? (
+                      <time className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">
+                        {email.date}
+                      </time>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                    {email.sender}
                   </p>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+                  {email.snippet ? (
+                    <p className="mt-2 line-clamp-2 text-sm text-zinc-500 dark:text-zinc-500">
+                      {email.snippet}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </section>
     </PageContainer>
