@@ -568,3 +568,37 @@ Permitir ver el resumen AI traducido vía query param sin reprocesar correos ni 
 
 ---
 
+## [2026-05-27 01:00]
+
+### Prompt
+
+"Migrate Prisma from local SQLite to Neon Postgres with minimal changes: postgresql provider, preserve SummaryHistory, Neon DATABASE_URL, keep queries/behavior unchanged; migrate dev + build."
+
+### Objetivo
+
+Usar Neon Postgres en lugar de SQLite sin cambiar lógica de aplicación ni modelo de datos.
+
+### Archivos modificados
+
+- `prisma/schema.prisma`
+- `prisma/migrations/migration_lock.toml`
+- `prisma/migrations/` (SQLite migration replaced with PostgreSQL `20260527120000_init_summary_history`)
+- `.env.example`
+- `.gitignore`
+- `AI_DEV_LOG.md`
+
+### Cambios realizados
+
+- Datasource `provider` cambiado de `sqlite` a `postgresql`; modelo `SummaryHistory` sin cambios.
+- Nueva migración PostgreSQL equivalente (mismas columnas; `TIMESTAMP(3)` para `createdAt`).
+- `.env.example`: URL de ejemplo Neon con `sslmode=require`.
+- Eliminadas entradas de `prisma/dev.db` en `.gitignore`.
+
+### Notas técnicas
+
+- Copiar `DATABASE_URL` pooled desde el dashboard de Neon a `.env.local`.
+- Ejecutar `npx prisma migrate dev` (o `migrate deploy` en producción) contra la base Neon antes de usar el historial.
+- `lib/prisma.ts` y consultas en dashboard/history sin cambios.
+
+---
+
