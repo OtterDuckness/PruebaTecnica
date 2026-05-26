@@ -12,6 +12,8 @@ import { buildGmailDateSearchQuery, fetchRecentEmails } from "@/lib/gmail";
 import {
   formatEmailSummaryForStorage,
   generateEmailSummary,
+  translateEmailSummary,
+  type SummaryLanguage,
 } from "@/lib/anthropic";
 import { getGoogleAccessTokenForGmail } from "@/lib/google-access-token";
 import { prisma } from "@/lib/prisma";
@@ -63,6 +65,7 @@ type DashboardPageProps = {
   searchParams: Promise<{
     from?: string | string[];
     to?: string | string[];
+    lang?: string | string[];
   }>;
 };
 
@@ -70,10 +73,30 @@ function queryParam(value: string | string[] | undefined): string | undefined {
   return typeof value === "string" ? value : value?.[0];
 }
 
+function summaryLanguage(
+  value: string | undefined,
+): SummaryLanguage | undefined {
+  return value === "en" || value === "es" ? value : undefined;
+}
+
+function dashboardUrl(
+  from?: string,
+  to?: string,
+  lang?: SummaryLanguage,
+): string {
+  const params = new URLSearchParams();
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  if (lang) params.set("lang", lang);
+  const query = params.toString();
+  return query ? `${ROUTES.dashboard}?${query}` : ROUTES.dashboard;
+}
+
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const params = await searchParams;
   const from = queryParam(params.from);
   const to = queryParam(params.to);
+  const lang = summaryLanguage(queryParam(params.lang));
   const session = await auth0.getSession();
   const user = session?.user;
   const gmail = await loadGmailPreviews(session, from, to);
@@ -81,6 +104,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     gmail.ok && gmail.emails.length > 0
       ? await generateEmailSummary(gmail.emails)
       : null;
+
+  let displaySummary = emailSummary;
+  if (emailSummary && lang) {
+    const translated = await translateEmailSummary(emailSummary, lang);
+    displaySummary = translated ?? emailSummary;
+  }
 
   if (emailSummary) {
     try {
@@ -207,21 +236,41 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <h3 className="text-sm font-medium text-indigo-900 dark:text-indigo-200">
                 AI summary
               </h3>
-              {emailSummary ? (
+              {displaySummary ? (
                 <>
                   <p className="mt-2 text-sm leading-relaxed text-indigo-950 dark:text-indigo-100">
-                    {emailSummary.summary}
+                    {displaySummary.summary}
                   </p>
-                  {emailSummary.actionItems ? (
+                  {displaySummary.actionItems ? (
                     <div className="mt-4 border-t border-indigo-200/80 pt-4 dark:border-indigo-800/50">
                       <h4 className="text-sm font-medium text-indigo-900 dark:text-indigo-200">
                         Action items
                       </h4>
                       <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-indigo-950 dark:text-indigo-100">
-                        {emailSummary.actionItems}
+                        {displaySummary.actionItems}
                       </p>
                     </div>
                   ) : null}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {lang !== "es" ? (
+                      <ButtonLink
+                        href={dashboardUrl(from, to, "es")}
+                        variant="ghost"
+                        className="px-3 py-1.5 text-xs"
+                      >
+                        Translate to Spanish
+                      </ButtonLink>
+                    ) : null}
+                    {lang === "es" ? (
+                      <ButtonLink
+                        href={dashboardUrl(from, to, "en")}
+                        variant="ghost"
+                        className="px-3 py-1.5 text-xs"
+                      >
+                        Translate to English
+                      </ButtonLink>
+                    ) : null}
+                  </div>
                 </>
               ) : (
                 <p className="mt-2 text-sm text-indigo-800/70 dark:text-indigo-300/70">

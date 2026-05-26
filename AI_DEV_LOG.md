@@ -539,3 +539,32 @@ Extraer ítems de acción junto al resumen sin parsing estructurado ni cambios d
 
 ---
 
+## [2026-05-27 00:00]
+
+### Prompt
+
+"Minimal AI summary translation EN/ES: ?lang=en|es, translateEmailSummary in lib/anthropic.ts (summary + action items only), dashboard links, server-side after generation, store original only in DB, no SDKs/hooks/routes."
+
+### Objetivo
+
+Permitir ver el resumen AI traducido vía query param sin reprocesar correos ni persistir traducciones.
+
+### Archivos modificados
+
+- `lib/anthropic.ts`
+- `app/dashboard/page.tsx`
+- `AI_DEV_LOG.md`
+
+### Cambios realizados
+
+- `translateEmailSummary(result, 'en' | 'es')`: prompt de traducción con mismas secciones; reutiliza cliente Anthropic y `parseEmailSummaryResponse`.
+- Dashboard: `lang` en `searchParams`; flujo generar → guardar original en SQLite → traducir solo para render si `lang` válido; fallback al original si falla traducción.
+- Enlaces GET: *Translate to Spanish* (`?lang=es`) / *Translate to English* (`?lang=en`), conservando `from`/`to`.
+
+### Notas técnicas
+
+- La base de datos solo recibe el texto generado original (`formatEmailSummaryForStorage(emailSummary)`).
+- Sin rutas API ni SDKs de traducción; un request extra a Anthropic solo cuando hay `lang`.
+
+---
+

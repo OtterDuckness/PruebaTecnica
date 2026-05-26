@@ -9,6 +9,8 @@ export type EmailSummaryResult = {
   actionItems: string | null;
 };
 
+export type SummaryLanguage = "en" | "es";
+
 function buildPrompt(emails: EmailPreview[]): string {
   const items = emails.slice(0, MAX_EMAILS).map(
     (email, index) =>
@@ -60,6 +62,68 @@ export function formatEmailSummaryForStorage(
     return result.summary;
   }
   return `${result.summary}\n\nAction items:\n${result.actionItems}`;
+}
+
+function buildTranslationPrompt(
+  result: EmailSummaryResult,
+  targetLang: SummaryLanguage,
+): string {
+  const language = targetLang === "es" ? "Spanish" : "English";
+  const actionSection = result.actionItems
+    ? `Action items:\n${result.actionItems}`
+    : "Action items:\nNone";
+
+  return `Translate the following email summary to ${language}. Respond in plain text only (no JSON).
+
+Use exactly these two section headers:
+
+Summary:
+
+Action items:
+
+Preserve meaning. Do not add details.
+
+Summary:
+${result.summary}
+
+${actionSection}`;
+}
+
+export async function translateEmailSummary(
+  result: EmailSummaryResult,
+  targetLang: SummaryLanguage,
+): Promise<EmailSummaryResult | null> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+
+  if (!apiKey) {
+    return null;
+  }
+
+  try {
+    const client = new Anthropic({ apiKey });
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 400,
+      temperature: 0.2,
+      messages: [
+        { role: "user", content: buildTranslationPrompt(result, targetLang) },
+      ],
+    });
+
+    const text = response.content.find((block) => block.type === "text");
+    if (text?.type !== "text") {
+      return null;
+    }
+
+    const trimmed = text.text.trim();
+    return trimmed ? parseEmailSummaryResponse(trimmed) : null;
+  } catch (error) {
+    console.error(
+      "[Anthropic] translateEmailSummary failed:",
+      error instanceof Error ? error.message : error,
+    );
+    return null;
+  }
 }
 
 export async function generateEmailSummary(
