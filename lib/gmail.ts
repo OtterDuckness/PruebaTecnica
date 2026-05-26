@@ -4,6 +4,28 @@ import type { EmailPreview, GmailFetchResult } from "@/types/gmail";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1/users/me";
 const DEFAULT_MAX_RESULTS = 5;
 
+function toGmailDate(isoDate: string): string {
+  return isoDate.replace(/-/g, "/");
+}
+
+export function buildGmailDateSearchQuery(
+  from?: string,
+  to?: string,
+): string | undefined {
+  const parts: string[] = [];
+  const fromTrimmed = from?.trim();
+  const toTrimmed = to?.trim();
+
+  if (fromTrimmed) {
+    parts.push(`after:${toGmailDate(fromTrimmed)}`);
+  }
+  if (toTrimmed) {
+    parts.push(`before:${toGmailDate(toTrimmed)}`);
+  }
+
+  return parts.length > 0 ? parts.join(" ") : undefined;
+}
+
 type GmailHeader = { name: string; value: string };
 
 type GmailMessageListResponse = {
@@ -88,9 +110,17 @@ async function fetchMessagePreview(
 export async function fetchRecentEmails(
   accessToken: string,
   maxResults = DEFAULT_MAX_RESULTS,
+  q?: string,
 ): Promise<GmailFetchResult> {
   try {
-    const listUrl = `${GMAIL_API}/messages?maxResults=${maxResults}&labelIds=INBOX`;
+    const listParams = new URLSearchParams({
+      maxResults: String(maxResults),
+      labelIds: "INBOX",
+    });
+    if (q) {
+      listParams.set("q", q);
+    }
+    const listUrl = `${GMAIL_API}/messages?${listParams.toString()}`;
     if (isGmailDebugEnabled()) {
       console.log("[GmailDebug] Gmail API: messages.list request", {
         url: listUrl,

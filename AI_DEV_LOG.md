@@ -409,3 +409,34 @@ Corregir error 404 de modelo Anthropic no disponible.
 
 ---
 
+## [2026-05-26 21:00]
+
+### Prompt
+
+"Implement minimal server-side Gmail date range filtering. Preserve architecture; no client state/hooks/date libraries. GET form with from/to on dashboard; extend Gmail fetch with optional `q` using `after:`/`before:`; keep summarization flow; missing dates = recent emails; update AI_DEV_LOG; run build."
+
+### Objetivo
+
+Filtrar correos de Gmail por rango de fechas en el servidor vía query string de búsqueda de Gmail, sin cambiar flujos Auth0/Anthropic ni añadir estado en cliente.
+
+### Archivos modificados
+
+- `lib/gmail.ts`
+- `app/dashboard/page.tsx`
+- `AI_DEV_LOG.md`
+
+### Cambios realizados
+
+- `buildGmailDateSearchQuery(from?, to?)`: convierte `YYYY-MM-DD` → `YYYY/MM/DD` y arma `after:` / `before:`; sin fechas devuelve `undefined`.
+- `fetchRecentEmails(accessToken, maxResults?, q?)`: añade parámetro opcional `q` a `messages.list` cuando hay filtro.
+- Dashboard: `searchParams` async (Next.js 16); formulario GET con inputs `from`/`to` y `defaultValue` desde URL; `loadGmailPreviews` pasa fechas al helper Gmail.
+- Sin fechas seleccionadas: mismo comportamiento que antes (INBOX reciente, máx. 5).
+
+### Notas técnicas
+
+- Filtrado 100 % server-side; el formulario solo navega con query params.
+- Gmail `before:` es exclusivo del día indicado; implementación mínima según assignment.
+- Resumen Anthropic sigue usando la lista filtrada devuelta por Gmail.
+
+---
+

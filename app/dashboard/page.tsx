@@ -8,7 +8,7 @@ import {
   debugLogSessionForGmail,
   isGmailDebugEnabled,
 } from "@/lib/gmail-debug";
-import { fetchRecentEmails } from "@/lib/gmail";
+import { buildGmailDateSearchQuery, fetchRecentEmails } from "@/lib/gmail";
 import { generateEmailSummary } from "@/lib/anthropic";
 import { getGoogleAccessTokenForGmail } from "@/lib/google-access-token";
 import { AUTH_ROUTES } from "@/lib/constants";
@@ -20,6 +20,8 @@ export const metadata: Metadata = {
 
 async function loadGmailPreviews(
   session: SessionData | null,
+  from?: string,
+  to?: string,
 ): Promise<GmailFetchResult> {
   if (isGmailDebugEnabled()) {
     console.log("[GmailDebug] loadGmailPreviews: starting (dashboard server)");
@@ -49,13 +51,28 @@ async function loadGmailPreviews(
     return { ok: false, error: tokenResult.error };
   }
 
-  return fetchRecentEmails(tokenResult.token);
+  const q = buildGmailDateSearchQuery(from, to);
+  return fetchRecentEmails(tokenResult.token, undefined, q);
 }
 
-export default async function DashboardPage() {
+type DashboardPageProps = {
+  searchParams: Promise<{
+    from?: string | string[];
+    to?: string | string[];
+  }>;
+};
+
+function queryParam(value: string | string[] | undefined): string | undefined {
+  return typeof value === "string" ? value : value?.[0];
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  const params = await searchParams;
+  const from = queryParam(params.from);
+  const to = queryParam(params.to);
   const session = await auth0.getSession();
   const user = session?.user;
-  const gmail = await loadGmailPreviews(session);
+  const gmail = await loadGmailPreviews(session, from, to);
   const summary =
     gmail.ok && gmail.emails.length > 0
       ? await generateEmailSummary(gmail.emails)
@@ -115,6 +132,36 @@ export default async function DashboardPage() {
         <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
           Recent emails
         </h2>
+
+        <form
+          method="get"
+          className="mt-4 flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 sm:p-5"
+        >
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-zinc-700 dark:text-zinc-300">From</span>
+            <input
+              type="date"
+              name="from"
+              defaultValue={from ?? ""}
+              className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-zinc-700 dark:text-zinc-300">To</span>
+            <input
+              type="date"
+              name="to"
+              defaultValue={to ?? ""}
+              className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+            />
+          </label>
+          <button
+            type="submit"
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+          >
+            Filter
+          </button>
+        </form>
 
         {!gmail.ok ? (
           <div
