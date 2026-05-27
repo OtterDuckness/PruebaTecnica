@@ -52,6 +52,33 @@ Establecer una base mínima del proyecto con estructura de carpetas, páginas pl
 
 ---
 
+## [2026-05-27 12:00]
+
+### Prompt
+
+"Improve Prisma summary persistence logging for production debugging: add [SUMMARY_SAVE_SUCCESS] and [SUMMARY_SAVE_ERROR] server logs around summaryHistory.create, keep behavior/UI unchanged, update AI_DEV_LOG, run build."
+
+### Objetivo
+
+Mejorar la observabilidad de la persistencia de resúmenes en producción sin cambiar el flujo funcional.
+
+### Archivos modificados
+
+- `app/dashboard/page.tsx`
+- `AI_DEV_LOG.md`
+
+### Cambios realizados
+
+- Éxito de guardado: log `[SUMMARY_SAVE_SUCCESS]` con `id`, `fromDate`, `toDate`, `createdAt`.
+- Error de guardado: log `[SUMMARY_SAVE_ERROR]` con `message` y `stack`, sin exponer detalles en la UI.
+- El flujo de renderizado y el fallback siguen intactos: los errores de BD no bloquean el resumen ni el dashboard.
+
+### Notas técnicas
+
+- Logs solo en servidor; no se envían al cliente.
+
+---
+
 ## [2026-05-26 14:30]
 
 ### Prompt

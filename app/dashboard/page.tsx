@@ -113,18 +113,25 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   if (emailSummary) {
     try {
-      await prisma.summaryHistory.create({
+      const created = await prisma.summaryHistory.create({
         data: {
           summary: formatEmailSummaryForStorage(emailSummary),
           fromDate: from ?? null,
           toDate: to ?? null,
         },
       });
+
+      console.log("[SUMMARY_SAVE_SUCCESS]", {
+        id: created.id,
+        fromDate: created.fromDate,
+        toDate: created.toDate,
+        createdAt: created.createdAt,
+      });
     } catch (error) {
-      console.error(
-        "[SummaryHistory] save failed:",
-        error instanceof Error ? error.message : error,
-      );
+      console.error("[SUMMARY_SAVE_ERROR]", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
     }
   }
 
