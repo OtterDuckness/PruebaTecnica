@@ -1,30 +1,22 @@
-## ImpactIQ — AI Gmail Inbox Summarizer (EN / ES)
+# ImpactIQ — AI Gmail Inbox Summarizer
 
-### 1) Title + short overview
+This project was built as part of the ImpactIQ Junior Application Developer internship technical assignment.
 
-#### English
-An AI-powered Gmail inbox summarizer built for the ImpactIQ internship technical assignment.
-
-#### Español
-Un resumidor de bandeja de entrada de Gmail impulsado por IA, construido para el desafío técnico de la pasantía de ImpactIQ.
+An AI-powered Gmail inbox summarizer built with Next.js, Auth0, Gmail API, Anthropic Claude, Prisma, and Neon Postgres.
 
 ---
 
-### 2) Live Demo + Repository
+# English
 
-#### English
-- Live deployment: https://prueba-tecnica-zeta-flame.vercel.app/
-- GitHub repository: https://github.com/OtterDuckness/PruebaTecnica
+## Live Demo & Repository
 
-#### Español
-- Despliegue en vivo: https://prueba-tecnica-zeta-flame.vercel.app/
-- Repositorio GitHub: https://github.com/OtterDuckness/PruebaTecnica
+- Live Demo: https://prueba-tecnica-zeta-flame.vercel.app/
+- Repository: https://github.com/OtterDuckness/PruebaTecnica
 
 ---
 
-### 3) Features / Funcionalidades
+## Features
 
-#### English
 - Google OAuth authentication (Auth0)
 - Gmail inbox retrieval
 - AI-generated email summaries
@@ -33,35 +25,12 @@ Un resumidor de bandeja de entrada de Gmail impulsado por IA, construido para el
 - Date range filtering
 - Summary history persistence (Prisma + Neon Postgres)
 - Server-side architecture
-- Responsive dashboard UI
-
-#### Español
-- Autenticación con Google OAuth (Auth0)
-- Lectura de bandeja de entrada de Gmail
-- Resúmenes generados por IA
-- Extracción de acciones a partir del contenido
-- Traducción entre inglés/español
-- Filtrado por rango de fechas
-- Persistencia del historial de resúmenes (Prisma + Neon Postgres)
-- Arquitectura server-side
-- UI responsive del dashboard
+- Responsive dashboard interface
 
 ---
 
-### 4) Tech Stack
+## Tech Stack
 
-#### English
-- Next.js App Router
-- TypeScript
-- TailwindCSS
-- Auth0
-- Gmail API
-- Anthropic SDK (Claude Sonnet 4)
-- Prisma ORM
-- Neon Postgres
-- Vercel
-
-#### Español
 - Next.js App Router
 - TypeScript
 - TailwindCSS
@@ -74,10 +43,9 @@ Un resumidor de bandeja de entrada de Gmail impulsado por IA, construido para el
 
 ---
 
-### 5) Architecture Overview / Arquitectura
+## Architecture Overview
 
-#### English
-Flow:
+### Flow
 
 ```text
 User
@@ -89,105 +57,197 @@ User
 → Dashboard rendering
 ```
 
-Notes:
-- Gmail API calls are server-side only.
-- Tokens are not persisted.
-- Minimal architecture approach: no vector DB / RAG / orchestration frameworks.
+### Notes
 
-#### Español
-Flujo:
+- Gmail API calls are server-side only
+- Tokens are not persisted
+- Minimal architecture approach
+- No vector DB / RAG / orchestration frameworks
+
+---
+
+## Local Setup
+
+### Install dependencies
+
+```bash
+npm install
+```
+
+### Start development server
+
+```bash
+npm run dev
+```
+
+### Run Prisma migrations
+
+```bash
+npx prisma migrate dev
+```
+
+---
+
+## Required Environment Variables
+
+```env
+AUTH0_DOMAIN=
+AUTH0_CLIENT_ID=
+AUTH0_CLIENT_SECRET=
+AUTH0_SECRET=
+APP_BASE_URL=
+
+AUTH0_MANAGEMENT_CLIENT_ID=
+AUTH0_MANAGEMENT_CLIENT_SECRET=
+
+ANTHROPIC_API_KEY=
+
+DATABASE_URL=
+```
+
+---
+
+## Production Deployment
+
+- Hosted on Vercel
+- Uses Neon Postgres in production
+- Auth0 callback URLs are required for authentication
+- Google OAuth remains in Testing mode due to Gmail readonly scopes
+- Reviewer Gmail accounts can be added as Google OAuth test users
+
+### Important Reviewer Note
+
+Because the application uses Gmail readonly scopes, Google OAuth remains in Testing mode. Reviewer Gmail accounts must be added as Google OAuth test users before access is granted.
+
+---
+
+## AI-Assisted Development
+
+- Cursor was used for implementation
+- ChatGPT was used for architecture guidance, debugging, and review
+- `AI_DEV_LOG.md` documents the implementation workflow and prompts
+
+---
+
+---
+
+# Español
+
+## Demo y Repositorio
+
+- Demo: https://prueba-tecnica-zeta-flame.vercel.app/
+- Repositorio: https://github.com/OtterDuckness/PruebaTecnica
+
+---
+
+## Funcionalidades
+
+- Autenticación con Google OAuth (Auth0)
+- Lectura de bandeja de entrada de Gmail
+- Resúmenes generados por IA
+- Extracción de acciones a partir del contenido
+- Traducción entre inglés y español
+- Filtrado por rango de fechas
+- Persistencia del historial de resúmenes (Prisma + Neon Postgres)
+- Arquitectura server-side
+- Interfaz responsive del dashboard
+
+---
+
+## Stack Tecnológico
+
+- Next.js App Router
+- TypeScript
+- TailwindCSS
+- Auth0
+- Gmail API
+- Anthropic SDK (Claude Sonnet 4)
+- Prisma ORM
+- Neon Postgres
+- Vercel
+
+---
+
+## Arquitectura
+
+### Flujo
 
 ```text
 Usuario
 → Autenticación con Auth0
-→ Token de acceso OAuth de Google
-→ Lectura con Gmail API
+→ Token OAuth de Google
+→ Lectura mediante Gmail API
 → Resumen con Anthropic
 → Persistencia con Prisma (solo resumen original)
-→ Render del dashboard
+→ Renderizado del dashboard
 ```
 
-Notas:
-- Llamadas a Gmail API solo desde el servidor.
-- Los tokens no se persisten.
-- Arquitectura mínima: sin vector DB / RAG / frameworks de orquestación.
+### Notas
+
+- Las llamadas a Gmail API se realizan únicamente desde el servidor
+- Los tokens no se persisten
+- Arquitectura mínima y simple
+- Sin vector DB / RAG / frameworks de orquestación
 
 ---
 
-### 6) Local Setup / Configuración local
+## Configuración Local
 
-#### English
+### Instalar dependencias
+
 ```bash
 npm install
+```
+
+### Iniciar entorno de desarrollo
+
+```bash
 npm run dev
+```
+
+### Ejecutar migraciones Prisma
+
+```bash
 npx prisma migrate dev
 ```
 
-#### Español
-```bash
-npm install
-npm run dev
-npx prisma migrate dev
+---
+
+## Variables de Entorno Requeridas
+
+```env
+AUTH0_DOMAIN=
+AUTH0_CLIENT_ID=
+AUTH0_CLIENT_SECRET=
+AUTH0_SECRET=
+APP_BASE_URL=
+
+AUTH0_MANAGEMENT_CLIENT_ID=
+AUTH0_MANAGEMENT_CLIENT_SECRET=
+
+ANTHROPIC_API_KEY=
+
+DATABASE_URL=
 ```
 
 ---
 
-### 7) Environment Variables / Variables de entorno
+## Despliegue en Producción
 
-#### English
-Required variables:
-- `AUTH0_DOMAIN`
-- `AUTH0_CLIENT_ID`
-- `AUTH0_CLIENT_SECRET`
-- `AUTH0_SECRET`
-- `APP_BASE_URL`
-- `AUTH0_MANAGEMENT_CLIENT_ID`
-- `AUTH0_MANAGEMENT_CLIENT_SECRET`
-- `ANTHROPIC_API_KEY`
-- `DATABASE_URL`
+- Publicado en Vercel
+- Usa Neon Postgres en producción
+- Las callback URLs de Auth0 son necesarias para el login/logout
+- Google OAuth permanece en modo Testing debido a los scopes readonly de Gmail
+- Las cuentas Gmail de los revisores pueden añadirse como usuarios de prueba
 
-#### Español
-Variables requeridas:
-- `AUTH0_DOMAIN`
-- `AUTH0_CLIENT_ID`
-- `AUTH0_CLIENT_SECRET`
-- `AUTH0_SECRET`
-- `APP_BASE_URL`
-- `AUTH0_MANAGEMENT_CLIENT_ID`
-- `AUTH0_MANAGEMENT_CLIENT_SECRET`
-- `ANTHROPIC_API_KEY`
-- `DATABASE_URL`
+### Nota Importante para Revisores
+
+Debido al uso de scopes readonly de Gmail, Google OAuth permanece en modo Testing. Las cuentas Gmail de los revisores deben agregarse como usuarios de prueba para poder acceder a la aplicación.
 
 ---
 
-### 8) Production Deployment / Despliegue
+## Desarrollo Asistido por IA
 
-#### English
-- Hosted on Vercel.
-- Uses Neon Postgres in production.
-- Auth0 callback URLs are required for login/logout to work.
-- Google OAuth remains in Testing mode due to Gmail `readonly` scopes.
-- Reviewer Gmail accounts can be added as test users.
-
-#### Español
-- Publicado en Vercel.
-- Usa Neon Postgres en producción.
-- Se requieren URLs de callback de Auth0 para que el login/logout funcione.
-- Google OAuth permanece en modo Testing por los scopes `readonly` de Gmail.
-- Las cuentas Gmail del revisor se pueden agregar como usuarios de prueba.
-
----
-
-### 9) AI-assisted Development / Desarrollo asistido por IA
-
-#### English
-- Cursor was used for implementation.
-- ChatGPT was used for architecture guidance, debugging, and review.
-- `AI_DEV_LOG.md` documents the development prompts and workflow.
-
-#### Español
-- Cursor se usó para la implementación.
-- ChatGPT se usó para guía de arquitectura, depuración y revisión.
-- `AI_DEV_LOG.md` documenta los prompts y el flujo de trabajo del desarrollo.
-
----
+- Cursor se utilizó para la implementación
+- ChatGPT se utilizó para guía de arquitectura, depuración y revisión
+- `AI_DEV_LOG.md` documenta el flujo de trabajo y los prompts utilizados durante el desarrollo
